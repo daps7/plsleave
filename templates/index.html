@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Motion Detector</title>
+
+    <!-- PubNub SDK -->
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
+
+    <!-- 🔑 Inject keys from Flask -->
+    <script>
+      window.PUBNUB_CONFIG = {
+        publishKey: "{{ pubnub_publish_key }}",
+        subscribeKey: "{{ pubnub_subscribe_key }}"
+      };
+    </script>
+
+    <!-- Your JS -->
+    <script src="{{ url_for('static', filename='js/pubnub.js') }}" defer></script>
+</head>
+<body>
+
+<h1 id="status">Waiting for motion...</h1>
+
+<script>
+  console.log("PUBNUB_CONFIG:", window.PUBNUB_CONFIG);
+</script>
+
+</body>
+</html>
