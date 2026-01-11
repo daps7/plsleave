@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Motion Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1 class="auth-title">Welcome to Motion Detector</h1>
+            <p class="auth-subtitle">Sign in to monitor motion in real-time</p>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ url_for('google_login') }}" class="btn btn-google">
+                    <i class="fab fa-google"></i>
+                    Sign in with Google
+                </a>
+            </div>
+            
+            <div class="divider">
+                <span class="divider-text">How it works</span>
+            </div>
+            
+            <div style="color: #666; font-size: 14px; line-height: 1.6;">
+                <p><i class="fas fa-shield-alt" style="color: #667eea;"></i> <strong>Secure Login:</strong> Your Google account ensures maximum security</p>
+                <p><i class="fas fa-video" style="color: #667eea;"></i> <strong>Real-time Monitoring:</strong> Get instant alerts when motion is detected</p>
+                <p><i class="fas fa-toggle-on" style="color: #667eea;"></i> <strong>Easy Control:</strong> Toggle motion detection on/off with one click</p>
+                <p><i class="fas fa-bell" style="color: #667eea;"></i> <strong>Instant Notifications:</strong> Browser notifications for immediate alerts</p>
+            </div>
+            
+            <div class="auth-links">
+                <p>By signing in, you agree to our <a href="/privacy" class="auth-link">Privacy Policy</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

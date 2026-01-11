@@ -1,29 +1,215 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Motion Detector</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Detector - Dashboard</title>
+    
     <!-- PubNub SDK -->
     <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"></script>
-
-    <!-- 🔑 Inject keys from Flask -->
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Our CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Configuration -->
     <script>
       window.PUBNUB_CONFIG = {
         publishKey: "{{ pubnub_publish_key }}",
         subscribeKey: "{{ pubnub_subscribe_key }}"
       };
+      window.USER_CONFIG = {
+        username: "{{ username }}",
+        motionEnabled: {{ 'true' if motion_enabled else 'false' }}
+      };
     </script>
-
-    <!-- Your JS -->
-    <script src="{{ url_for('static', filename='js/pubnub.js') }}" defer></script>
 </head>
 <body>
-
-<h1 id="status">Waiting for motion...</h1>
-
-<script>
-  console.log("PUBNUB_CONFIG:", window.PUBNUB_CONFIG);
-</script>
-
+    <div class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">Motion Detector</div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">
+                    {{ username[0]|upper }}
+                </div>
+                <div class="user-name" id="user-name">{{ username }}</div>
+                <a href="{{ url_for('logout') }}" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Left Column - Controls -->
+            <div class="control-card">
+                <h2 class="card-title">
+                    <i class="fas fa-video"></i> Motion Detection Control
+                </h2>
+                
+                <div class="toggle-container">
+                    <div>
+                        <div class="toggle-label">Motion Detection</div>
+                        <div class="toggle-description">
+                            Turn motion detection on/off for your account
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="motion-toggle" {{ 'checked' if motion_enabled else '' }}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="status-container">
+                    <div class="status-icon" id="status-icon">
+                        {{ '🔴' if not motion_enabled else '🟢' }}
+                    </div>
+                    <div class="status-text {{ 'status-active' if motion_enabled else 'status-inactive' }}" id="status-text">
+                        {{ 'Motion Detection Disabled' if not motion_enabled else 'Motion Detection Active' }}
+                    </div>
+                    <div class="status-description" id="status-description">
+                        {{ 'Enable motion detection to start monitoring' if not motion_enabled else 'System is actively monitoring for motion' }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Activity -->
+            <div class="activity-card">
+                <h2 class="card-title">
+                    <i class="fas fa-history"></i> Recent Activity
+                </h2>
+                
+                <ul class="activity-list" id="activity-list">
+                    <li class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Logged in successfully</div>
+                            <div class="activity-time">Just now</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Motion detection {{ 'enabled' if motion_enabled else 'disabled' }}</div>
+                            <div class="activity-time">Just now</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <footer class="app-footer">
+            <p>Motion Detector System • Secure Monitoring Solution</p>
+        </footer>
+    </div>
+    
+    <!-- PubNub JS -->
+    <script src="{{ url_for('static', filename='js/pubnub.js') }}"></script>
+    
+    <!-- Dashboard JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const motionToggle = document.getElementById('motion-toggle');
+            const statusIcon = document.getElementById('status-icon');
+            const statusText = document.getElementById('status-text');
+            const statusDescription = document.getElementById('status-description');
+            
+            // Update UI based on initial state
+            updateMotionUI(window.USER_CONFIG.motionEnabled);
+            
+            // Toggle motion detection
+            motionToggle.addEventListener('change', function() {
+                const enabled = this.checked;
+                
+                // Show loading
+                statusIcon.textContent = '⏳';
+                statusText.textContent = 'Updating...';
+                statusDescription.textContent = 'Please wait';
+                
+                // Send request to server
+                fetch('/api/motion/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ enabled: enabled })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateMotionUI(data.enabled);
+                        
+                        // Add activity log
+                        addActivityLog(
+                            `Motion detection ${data.enabled ? 'enabled' : 'disabled'}`,
+                            'Just now'
+                        );
+                        
+                        // Update PubNub subscription based on toggle state
+                        if (window.pubnubClient) {
+                            if (data.enabled) {
+                                window.pubnubClient.subscribe({
+                                    channels: ['motion_channel']
+                                });
+                                console.log('Subscribed to motion channel');
+                            } else {
+                                window.pubnubClient.unsubscribe({
+                                    channels: ['motion_channel']
+                                });
+                                console.log('Unsubscribed from motion channel');
+                            }
+                        }
+                    } else {
+                        motionToggle.checked = !enabled;
+                        alert('Failed to update settings');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    motionToggle.checked = !enabled;
+                    alert('Error updating settings');
+                });
+            });
+            
+            function updateMotionUI(enabled) {
+                if (enabled) {
+                    statusIcon.textContent = '🟢';
+                    statusIcon.className = 'status-icon';
+                    statusText.textContent = 'Motion Detection Active';
+                    statusText.className = 'status-text status-active';
+                    statusDescription.textContent = 'System is actively monitoring for motion';
+                } else {
+                    statusIcon.textContent = '🔴';
+                    statusIcon.className = 'status-icon';
+                    statusText.textContent = 'Motion Detection Disabled';
+                    statusText.className = 'status-text status-inactive';
+                    statusDescription.textContent = 'Enable motion detection to start monitoring';
+                }
+            }
+            
+            function addActivityLog(title, time) {
+                const activityList = document.getElementById('activity-list');
+                const activityItem = document.createElement('li');
+                activityItem.className = 'activity-item';
+                activityItem.innerHTML = `
+                    <div class="activity-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">${title}</div>
+                        <div class="activity-time">${time}</div>
+                    </div>
+                `;
+                activityList.insertBefore(activityItem, activityList.firstChild);
+            }
+        });
+    </script>
 </body>
 </html>
